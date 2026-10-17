@@ -32,3 +32,14 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Development
+docs
+AGENTS.md
+PROGRESS.md
+DECISIONS.md
+FLOW.md
+SRS.md
+edge-spec.md
+DESIGN.md
+ui-spec.md
