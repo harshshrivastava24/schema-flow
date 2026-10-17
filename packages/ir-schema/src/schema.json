@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IRDocument",
+  "type": "object",
+  "required": ["irVersion", "project", "entities", "relations", "endpoints", "auth"],
+  "additionalProperties": false,
+  "properties": {
+    "irVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "project": {
+      "type": "object",
+      "required": ["name", "database"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "database": {
+          "type": "string",
+          "enum": ["postgres", "mongodb"]
+        }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "tableName", "fields"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ent_[A-Za-z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+          },
+          "tableName": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "type"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^fld_[A-Za-z0-9_-]+$"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["string", "int", "decimal", "bool", "timestamp", "uuid", "json", "enum"]
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "unique": {
+                  "type": "boolean"
+                },
+                "isPrimaryKey": {
+                  "type": "boolean"
+                },
+                "default": {
+                  "type": ["string", "number", "boolean"]
+                },
+                "enumValues": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "fromEntityId", "toEntityId", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^rel_[A-Za-z0-9_-]+$"
+          },
+          "fromEntityId": {
+            "type": "string",
+            "pattern": "^ent_[A-Za-z0-9_-]+$"
+          },
+          "toEntityId": {
+            "type": "string",
+            "pattern": "^ent_[A-Za-z0-9_-]+$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["one-to-one", "one-to-many", "many-to-many"]
+          },
+          "foreignKeyField": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+          },
+          "onDelete": {
+            "type": "string",
+            "enum": ["RESTRICT", "CASCADE", "SET_NULL"]
+          }
+        }
+      }
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["entityId", "ops", "authRequired"],
+        "additionalProperties": false,
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "pattern": "^ent_[A-Za-z0-9_-]+$"
+          },
+          "ops": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["list", "get", "create", "update", "delete"]
+            }
+          },
+          "authRequired": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": ["enabled", "strategy", "roles"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "strategy": {
+          "type": "string",
+          "const": "jwt"
+        },
+        "roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "color": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
