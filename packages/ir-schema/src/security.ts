@@ -3,6 +3,7 @@ export const ENUM_VALUE_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 
 export const MAX_ENTITIES = 50;
 export const MAX_FIELDS_PER_ENTITY = 100;
+export const MAX_SCHEMA_SIZE_BYTES = 1024 * 1024; // 1 MB
 
 export const SQL_RESERVED_WORDS = new Set([
   "ALL", "ALTER", "AND", "ANY", "AS", "ASC", "BETWEEN", "CASE", "CHECK",
