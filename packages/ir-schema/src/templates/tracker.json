@@ -1,0 +1,241 @@
+{
+  "irVersion": "1.0",
+  "project": {
+    "name": "tracker-api",
+    "database": "postgres"
+  },
+  "entities": [
+    {
+      "id": "ent_workspace",
+      "name": "Workspace",
+      "tableName": "workspaces",
+      "fields": [
+        {
+          "id": "fld_ws_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_ws_name",
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_ws_slug",
+          "name": "slug",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_ws_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_project",
+      "name": "Project",
+      "tableName": "projects",
+      "fields": [
+        {
+          "id": "fld_proj_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_proj_workspaceId",
+          "name": "workspaceId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_proj_name",
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_proj_key",
+          "name": "key",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_proj_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_user",
+      "name": "User",
+      "tableName": "users",
+      "fields": [
+        {
+          "id": "fld_usr_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_usr_email",
+          "name": "email",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_usr_displayName",
+          "name": "displayName",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_usr_role",
+          "name": "role",
+          "type": "enum",
+          "required": true,
+          "enumValues": ["ADMIN", "MEMBER", "GUEST"],
+          "default": "MEMBER"
+        }
+      ]
+    },
+    {
+      "id": "ent_issue",
+      "name": "Issue",
+      "tableName": "issues",
+      "fields": [
+        {
+          "id": "fld_iss_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_iss_projectId",
+          "name": "projectId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_iss_assigneeId",
+          "name": "assigneeId",
+          "type": "uuid",
+          "required": false
+        },
+        {
+          "id": "fld_iss_title",
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_iss_priority",
+          "name": "priority",
+          "type": "enum",
+          "required": true,
+          "enumValues": ["LOW", "MEDIUM", "HIGH", "URGENT"],
+          "default": "MEDIUM"
+        },
+        {
+          "id": "fld_iss_status",
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "enumValues": ["TODO", "IN_PROGRESS", "DONE"],
+          "default": "TODO"
+        },
+        {
+          "id": "fld_iss_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel_ws_projects",
+      "fromEntityId": "ent_workspace",
+      "toEntityId": "ent_project",
+      "kind": "one-to-many",
+      "foreignKeyField": "workspaceId",
+      "onDelete": "CASCADE"
+    },
+    {
+      "id": "rel_proj_issues",
+      "fromEntityId": "ent_project",
+      "toEntityId": "ent_issue",
+      "kind": "one-to-many",
+      "foreignKeyField": "projectId",
+      "onDelete": "CASCADE"
+    },
+    {
+      "id": "rel_usr_issues",
+      "fromEntityId": "ent_user",
+      "toEntityId": "ent_issue",
+      "kind": "one-to-many",
+      "foreignKeyField": "assigneeId",
+      "onDelete": "SET_NULL"
+    }
+  ],
+  "endpoints": [
+    {
+      "entityId": "ent_workspace",
+      "ops": ["list", "get", "create", "update", "delete"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_project",
+      "ops": ["list", "get", "create", "update", "delete"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_user",
+      "ops": ["list", "get", "create", "update"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_issue",
+      "ops": ["list", "get", "create", "update", "delete"],
+      "authRequired": true
+    }
+  ],
+  "auth": {
+    "enabled": true,
+    "strategy": "jwt",
+    "roles": ["ADMIN", "MEMBER", "GUEST"]
+  },
+  "layout": {
+    "nodes": {
+      "ent_workspace": { "x": 100, "y": 100, "color": "lime" },
+      "ent_project": { "x": 450, "y": 100, "color": "lime" },
+      "ent_issue": { "x": 800, "y": 100, "color": "lime" },
+      "ent_user": { "x": 800, "y": 420, "color": "lime" }
+    }
+  }
+}

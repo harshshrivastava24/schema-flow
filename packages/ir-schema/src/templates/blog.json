@@ -1,0 +1,239 @@
+{
+  "irVersion": "1.0",
+  "project": {
+    "name": "blog-api",
+    "database": "postgres"
+  },
+  "entities": [
+    {
+      "id": "ent_user",
+      "name": "User",
+      "tableName": "users",
+      "fields": [
+        {
+          "id": "fld_user_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_user_email",
+          "name": "email",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_user_name",
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_user_role",
+          "name": "role",
+          "type": "enum",
+          "required": true,
+          "enumValues": ["ADMIN", "AUTHOR", "USER"],
+          "default": "USER"
+        },
+        {
+          "id": "fld_user_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_post",
+      "name": "Post",
+      "tableName": "posts",
+      "fields": [
+        {
+          "id": "fld_post_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_post_title",
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_post_slug",
+          "name": "slug",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_post_content",
+          "name": "content",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_post_authorId",
+          "name": "authorId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_post_published",
+          "name": "published",
+          "type": "bool",
+          "required": true,
+          "default": false
+        },
+        {
+          "id": "fld_post_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_comment",
+      "name": "Comment",
+      "tableName": "comments",
+      "fields": [
+        {
+          "id": "fld_comment_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_comment_body",
+          "name": "body",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_comment_postId",
+          "name": "postId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_comment_authorId",
+          "name": "authorId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_comment_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_tag",
+      "name": "Tag",
+      "tableName": "tags",
+      "fields": [
+        {
+          "id": "fld_tag_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_tag_name",
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "unique": true
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel_user_posts",
+      "fromEntityId": "ent_user",
+      "toEntityId": "ent_post",
+      "kind": "one-to-many",
+      "foreignKeyField": "authorId",
+      "onDelete": "CASCADE"
+    },
+    {
+      "id": "rel_post_comments",
+      "fromEntityId": "ent_post",
+      "toEntityId": "ent_comment",
+      "kind": "one-to-many",
+      "foreignKeyField": "postId",
+      "onDelete": "CASCADE"
+    },
+    {
+      "id": "rel_user_comments",
+      "fromEntityId": "ent_user",
+      "toEntityId": "ent_comment",
+      "kind": "one-to-many",
+      "foreignKeyField": "authorId",
+      "onDelete": "CASCADE"
+    },
+    {
+      "id": "rel_post_tags",
+      "fromEntityId": "ent_post",
+      "toEntityId": "ent_tag",
+      "kind": "many-to-many"
+    }
+  ],
+  "endpoints": [
+    {
+      "entityId": "ent_user",
+      "ops": ["list", "get", "create", "update", "delete"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_post",
+      "ops": ["list", "get", "create", "update", "delete"],
+      "authRequired": false
+    },
+    {
+      "entityId": "ent_comment",
+      "ops": ["list", "get", "create", "delete"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_tag",
+      "ops": ["list", "get", "create"],
+      "authRequired": false
+    }
+  ],
+  "auth": {
+    "enabled": true,
+    "strategy": "jwt",
+    "roles": ["ADMIN", "AUTHOR", "USER"]
+  },
+  "layout": {
+    "nodes": {
+      "ent_user": { "x": 100, "y": 100, "color": "lime" },
+      "ent_post": { "x": 450, "y": 100, "color": "lime" },
+      "ent_comment": { "x": 450, "y": 420, "color": "lime" },
+      "ent_tag": { "x": 800, "y": 100, "color": "lime" }
+    }
+  }
+}

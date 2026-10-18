@@ -1,0 +1,249 @@
+{
+  "irVersion": "1.0",
+  "project": {
+    "name": "shop-api",
+    "database": "postgres"
+  },
+  "entities": [
+    {
+      "id": "ent_customer",
+      "name": "Customer",
+      "tableName": "customers",
+      "fields": [
+        {
+          "id": "fld_cust_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_cust_email",
+          "name": "email",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_cust_fullName",
+          "name": "fullName",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_cust_tier",
+          "name": "tier",
+          "type": "enum",
+          "required": true,
+          "enumValues": ["BRONZE", "SILVER", "GOLD"],
+          "default": "BRONZE"
+        },
+        {
+          "id": "fld_cust_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_product",
+      "name": "Product",
+      "tableName": "products",
+      "fields": [
+        {
+          "id": "fld_prod_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_prod_sku",
+          "name": "sku",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_prod_title",
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "id": "fld_prod_price",
+          "name": "price",
+          "type": "decimal",
+          "required": true,
+          "default": 0
+        },
+        {
+          "id": "fld_prod_inventory",
+          "name": "inventory",
+          "type": "int",
+          "required": true,
+          "default": 0
+        },
+        {
+          "id": "fld_prod_isActive",
+          "name": "isActive",
+          "type": "bool",
+          "required": true,
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "ent_order",
+      "name": "Order",
+      "tableName": "orders",
+      "fields": [
+        {
+          "id": "fld_ord_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_ord_customerId",
+          "name": "customerId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_ord_totalAmount",
+          "name": "totalAmount",
+          "type": "decimal",
+          "required": true,
+          "default": 0
+        },
+        {
+          "id": "fld_ord_status",
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "enumValues": ["PENDING", "PAID", "SHIPPED", "CANCELLED"],
+          "default": "PENDING"
+        },
+        {
+          "id": "fld_ord_createdAt",
+          "name": "createdAt",
+          "type": "timestamp",
+          "required": true,
+          "default": "now()"
+        }
+      ]
+    },
+    {
+      "id": "ent_order_item",
+      "name": "OrderItem",
+      "tableName": "order_items",
+      "fields": [
+        {
+          "id": "fld_item_id",
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "isPrimaryKey": true,
+          "default": "uuid()"
+        },
+        {
+          "id": "fld_item_orderId",
+          "name": "orderId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_item_productId",
+          "name": "productId",
+          "type": "uuid",
+          "required": true
+        },
+        {
+          "id": "fld_item_quantity",
+          "name": "quantity",
+          "type": "int",
+          "required": true,
+          "default": 1
+        },
+        {
+          "id": "fld_item_unitPrice",
+          "name": "unitPrice",
+          "type": "decimal",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel_cust_orders",
+      "fromEntityId": "ent_customer",
+      "toEntityId": "ent_order",
+      "kind": "one-to-many",
+      "foreignKeyField": "customerId",
+      "onDelete": "RESTRICT"
+    },
+    {
+      "id": "rel_ord_items",
+      "fromEntityId": "ent_order",
+      "toEntityId": "ent_order_item",
+      "kind": "one-to-many",
+      "foreignKeyField": "orderId",
+      "onDelete": "CASCADE"
+    },
+    {
+      "id": "rel_prod_items",
+      "fromEntityId": "ent_product",
+      "toEntityId": "ent_order_item",
+      "kind": "one-to-many",
+      "foreignKeyField": "productId",
+      "onDelete": "RESTRICT"
+    }
+  ],
+  "endpoints": [
+    {
+      "entityId": "ent_customer",
+      "ops": ["list", "get", "create", "update"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_product",
+      "ops": ["list", "get", "create", "update", "delete"],
+      "authRequired": false
+    },
+    {
+      "entityId": "ent_order",
+      "ops": ["list", "get", "create", "update"],
+      "authRequired": true
+    },
+    {
+      "entityId": "ent_order_item",
+      "ops": ["list", "get", "create", "delete"],
+      "authRequired": true
+    }
+  ],
+  "auth": {
+    "enabled": true,
+    "strategy": "jwt",
+    "roles": ["ADMIN", "CUSTOMER", "OPERATOR"]
+  },
+  "layout": {
+    "nodes": {
+      "ent_customer": { "x": 100, "y": 100, "color": "lime" },
+      "ent_order": { "x": 450, "y": 100, "color": "lime" },
+      "ent_order_item": { "x": 800, "y": 100, "color": "lime" },
+      "ent_product": { "x": 800, "y": 420, "color": "lime" }
+    }
+  }
+}
