@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/format"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -111,44 +112,75 @@ func Compile(req *ir.CompileRequest) (*CompileResult, error) {
 	})
 	result.OpenAPI = oapiJSON
 
-	// 3c. Scaffold README.md
-	readmeContent := generateReadme(&req.IR, req.Target)
-	files = append(files, GeneratedFile{
-		Path:     "generated/README.md",
-		Content:  []byte(readmeContent),
-		Language: "markdown",
-	})
+	// 3c. Target templates or core scaffold fallback
+	var targetFiles []GeneratedFile
+	targetsDir, err := FindTargetsDir()
+	if err == nil {
+		targetPath := filepath.Join(targetsDir, req.Target)
+		manifest, err := LoadManifest(targetPath)
+		if err == nil && manifest.SupportsDatabase(string(req.IR.Project.Database)) {
+			rendered, err := RenderTargetTemplates(&req.IR, req.Target, targetPath, manifest)
+			if err != nil {
+				return nil, fmt.Errorf("render target templates: %w", err)
+			}
+			targetFiles = rendered
+		}
+	}
 
-	// 3d. .env.example
-	envContent := generateEnvExample(&req.IR)
-	files = append(files, GeneratedFile{
-		Path:     "generated/.env.example",
-		Content:  []byte(envContent),
-		Language: "dotenv",
-	})
+	if len(targetFiles) > 0 {
+		files = append(files, targetFiles...)
 
-	// 3e. Dockerfile
-	dockerContent := generateDockerfile(req.Target)
-	files = append(files, GeneratedFile{
-		Path:     "generated/Dockerfile",
-		Content:  []byte(dockerContent),
-		Language: "dockerfile",
-	})
+		// Ensure OpenAPI is also copied into src/generated/openapi.json for local reference
+		hasSrcOpenAPI := false
+		for _, f := range files {
+			if f.Path == "src/generated/openapi.json" {
+				hasSrcOpenAPI = true
+				break
+			}
+		}
+		if !hasSrcOpenAPI {
+			files = append(files, GeneratedFile{
+				Path:     "src/generated/openapi.json",
+				Content:  oapiBuf.Bytes(),
+				Language: "json",
+			})
+		}
+	} else {
+		// Fallback scaffold for targets/databases not yet templated
+		readmeContent := generateReadme(&req.IR, req.Target)
+		files = append(files, GeneratedFile{
+			Path:     "generated/README.md",
+			Content:  []byte(readmeContent),
+			Language: "markdown",
+		})
 
-	// 3f. docker-compose.yml
-	composeContent := generateDockerCompose(&req.IR, req.Target)
-	files = append(files, GeneratedFile{
-		Path:     "generated/docker-compose.yml",
-		Content:  []byte(composeContent),
-		Language: "yaml",
-	})
+		envContent := generateEnvExample(&req.IR)
+		files = append(files, GeneratedFile{
+			Path:     "generated/.env.example",
+			Content:  []byte(envContent),
+			Language: "dotenv",
+		})
 
-	// 3g. Custom hooks stub
-	files = append(files, GeneratedFile{
-		Path:     "custom/hooks/.gitkeep",
-		Content:  []byte(""),
-		Language: "",
-	})
+		dockerContent := generateDockerfile(req.Target)
+		files = append(files, GeneratedFile{
+			Path:     "generated/Dockerfile",
+			Content:  []byte(dockerContent),
+			Language: "dockerfile",
+		})
+
+		composeContent := generateDockerCompose(&req.IR, req.Target)
+		files = append(files, GeneratedFile{
+			Path:     "generated/docker-compose.yml",
+			Content:  []byte(composeContent),
+			Language: "yaml",
+		})
+
+		files = append(files, GeneratedFile{
+			Path:     "custom/hooks/.gitkeep",
+			Content:  []byte(""),
+			Language: "",
+		})
+	}
 
 	// ───── Phase 4: Sort all files alphabetically (FR-25) ─────
 	sort.Slice(files, func(i, j int) bool {
