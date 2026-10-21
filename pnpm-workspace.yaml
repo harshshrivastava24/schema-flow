@@ -1,3 +1,6 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+  - 'targets/*/*'
+allowBuilds:
+  mongodb-memory-server: true
