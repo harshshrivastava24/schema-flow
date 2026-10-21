@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://db:27017/{{.Project.Name}}
+      {{if .HasAuth}}
+      - JWT_SECRET=change-me-to-a-secure-random-string
+      - JWT_EXPIRES_IN=24h
+      {{end}}
+    depends_on:
+      - db
+
+  db:
+    image: mongo:7
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodata:/data/db
+
+volumes:
+  mongodata:

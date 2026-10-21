@@ -1,0 +1,32 @@
+import { z } from 'zod';
+
+{{range .Fields}}
+{{if eq .Type "enum"}}
+export const {{$.Name}}{{.Name | pascal}}Enum = z.enum([{{range $i, $v := .EnumValues}}{{if $i}}, {{end}}'{{$v}}'{{end}}]);
+{{end}}
+{{end}}
+
+export const {{.Name}}CreateSchema = z.object({
+{{range .Fields}}
+{{if and (not .IsPrimaryKey) (not .IsAutoTimestamp)}}
+  {{.Name}}: {{if eq .Type "enum"}}{{$.Name}}{{.Name | pascal}}Enum{{else if eq .Name "email"}}z.string().email('Invalid email address'){{else if eq .Type "string"}}z.string(){{if .Required}}.min(1, '{{.Name | pascal}} is required'){{end}}{{else if or (eq .Type "int") (eq .Type "decimal")}}z.number(){{if eq .Type "int"}}.int(){{end}}{{else if eq .Type "bool"}}z.boolean(){{else if eq .Type "timestamp"}}z.string().or(z.date()){{else if eq .Type "uuid"}}z.string(){{if .Required}}.min(1, '{{.Name | pascal}} is required'){{end}}{{else if eq .Type "json"}}z.record(z.unknown()).or(z.array(z.unknown())){{else}}z.any(){{end}}{{if .Default}}.optional().default({{.Default}}){{else if not .Required}}.optional(){{end}},
+{{end}}
+{{end}}
+{{if and .IsAuthEntity $.Project.HasAuth}}
+  password: z.string().min(6, 'Password must be at least 6 characters').optional()
+{{end}}
+});
+
+export const {{.Name}}UpdateSchema = z.object({
+{{range .Fields}}
+{{if and (not .IsPrimaryKey) (not .IsAutoTimestamp)}}
+  {{.Name}}: {{if eq .Type "enum"}}{{$.Name}}{{.Name | pascal}}Enum.optional(){{else if eq .Name "email"}}z.string().email('Invalid email address').optional(){{else if eq .Type "string"}}z.string().min(1, '{{.Name | pascal}} cannot be empty').optional(){{else if or (eq .Type "int") (eq .Type "decimal")}}z.number(){{if eq .Type "int"}}.int(){{end}}.optional(){{else if eq .Type "bool"}}z.boolean().optional(){{else if eq .Type "timestamp"}}z.string().or(z.date()).optional(){{else if eq .Type "uuid"}}z.string().min(1, '{{.Name | pascal}} cannot be empty').optional(){{else if eq .Type "json"}}z.record(z.unknown()).or(z.array(z.unknown())).optional(){{else}}z.any().optional(){{end}},
+{{end}}
+{{end}}
+{{if and .IsAuthEntity $.Project.HasAuth}}
+  password: z.string().min(6, 'Password must be at least 6 characters').optional()
+{{end}}
+});
+
+export type {{.Name}}CreateInput = z.infer<typeof {{.Name}}CreateSchema>;
+export type {{.Name}}UpdateInput = z.infer<typeof {{.Name}}UpdateSchema>;

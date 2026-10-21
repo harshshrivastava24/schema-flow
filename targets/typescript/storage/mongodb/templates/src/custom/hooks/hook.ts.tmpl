@@ -1,0 +1,49 @@
+export interface {{.Name}}CreateInput {
+{{range .Fields}}
+{{if and (not .IsPrimaryKey) (not .IsAutoTimestamp)}}
+  {{.Name}}{{if not .Required}}?{{end}}: {{.TsType}};
+{{end}}
+{{end}}
+{{if and .IsAuthEntity $.Project.HasAuth}}
+  password?: string;
+{{end}}
+  [key: string]: unknown;
+}
+
+export interface {{.Name}}UpdateInput {
+{{range .Fields}}
+{{if and (not .IsPrimaryKey) (not .IsAutoTimestamp)}}
+  {{.Name}}?: {{.TsType}};
+{{end}}
+{{end}}
+{{if and .IsAuthEntity $.Project.HasAuth}}
+  password?: string;
+{{end}}
+  [key: string]: unknown;
+}
+
+export interface {{.Name}}Hooks {
+  beforeCreate?: (input: {{.Name}}CreateInput) => Promise<{{.Name}}CreateInput> | {{.Name}}CreateInput;
+  afterCreate?: (entity: Record<string, unknown>) => Promise<void> | void;
+  beforeUpdate?: (id: string, input: {{.Name}}UpdateInput) => Promise<{{.Name}}UpdateInput> | {{.Name}}UpdateInput;
+  afterUpdate?: (entity: Record<string, unknown>) => Promise<void> | void;
+  beforeDelete?: (id: string) => Promise<void> | void;
+  afterDelete?: (id: string) => Promise<void> | void;
+}
+
+/**
+ * Custom hooks slot for {{.Name}} entity.
+ * Developers can add custom logic here without losing it on regeneration.
+ */
+export const {{.CamelName}}Hooks: {{.Name}}Hooks = {
+  beforeCreate: async (input) => {
+    return input;
+  },
+  afterCreate: async (_entity) => {},
+  beforeUpdate: async (_id, input) => {
+    return input;
+  },
+  afterUpdate: async (_entity) => {},
+  beforeDelete: async (_id) => {},
+  afterDelete: async (_id) => {}
+};

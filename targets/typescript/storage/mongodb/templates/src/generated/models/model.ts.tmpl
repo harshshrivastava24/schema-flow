@@ -1,0 +1,75 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+import { randomUUID } from 'node:crypto';
+import {
+  {{.Name}}CreateSchema,
+  {{.Name}}UpdateSchema{{range .Fields}}{{if eq .Type "enum"}},
+  {{$.Name}}{{.Name | pascal}}Enum{{end}}{{end}}
+} from '../schemas/{{.SnakeName}}.schema.js';
+
+export {
+  {{.Name}}CreateSchema,
+  {{.Name}}UpdateSchema{{range .Fields}}{{if eq .Type "enum"}},
+  {{$.Name}}{{.Name | pascal}}Enum{{end}}{{end}},
+  type {{.Name}}CreateInput,
+  type {{.Name}}UpdateInput
+} from '../schemas/{{.SnakeName}}.schema.js';
+
+export interface I{{.Name}} extends Document<string> {
+  _id: string;
+  id: string;
+{{range .Fields}}
+{{if not .IsPrimaryKey}}
+  {{.Name}}{{if not .Required}}?{{end}}: {{.TsType}};
+{{end}}
+{{end}}
+{{if and .IsAuthEntity $.Project.HasAuth}}
+  password?: string;
+{{end}}
+}
+
+const {{.CamelName}}Schema = new Schema<I{{.Name}}>(
+  {
+    _id: {
+      type: String,
+      default: () => randomUUID()
+    },
+{{range .Fields}}
+{{if not .IsPrimaryKey}}
+    {{.Name}}: {
+      type: {{.MongooseType}},
+      required: {{.Required}},
+{{if .Unique}}      unique: true,
+{{end}}{{if eq .Name "email"}}      trim: true,
+      lowercase: true,
+{{else if eq .Type "string"}}      trim: true,
+{{end}}{{if eq .Type "enum"}}      enum: [{{range $i, $v := .EnumValues}}{{if $i}}, {{end}}'{{$v}}'{{end}}],
+{{end}}{{if .Default}}      default: {{.Default}},
+{{end}}{{if .RefEntity}}      ref: '{{.RefEntity}}',
+{{end}}    },
+{{end}}
+{{end}}
+{{if and .IsAuthEntity $.Project.HasAuth}}
+    password: {
+      type: String,
+      required: false
+    },
+{{end}}
+  },
+  {
+    timestamps: false,
+    versionKey: false
+  }
+);
+
+{{.CamelName}}Schema.set('toJSON', {
+  virtuals: true,
+  transform: (_doc, ret: Record<string, any>) => {
+    ret.id = ret._id;
+    delete ret.__v;
+    delete ret.password;
+    return ret;
+  }
+});
+
+export const {{.Name}}: Model<I{{.Name}}> =
+  (mongoose.models.{{.Name}} as Model<I{{.Name}}>) || mongoose.model<I{{.Name}}>('{{.Name}}', {{.CamelName}}Schema);
