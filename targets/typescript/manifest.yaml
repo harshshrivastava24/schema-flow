@@ -1,0 +1,100 @@
+name: typescript
+language: typescript
+databases:
+  - mongodb
+
+templates:
+  # Root project configuration
+  - source: storage/mongodb/templates/package.json.tmpl
+    output: package.json
+    storage: mongodb
+    language: json
+  - source: storage/mongodb/templates/tsconfig.json.tmpl
+    output: tsconfig.json
+    storage: mongodb
+    language: json
+  - source: storage/mongodb/templates/Dockerfile.tmpl
+    output: Dockerfile
+    storage: mongodb
+    language: dockerfile
+  - source: storage/mongodb/templates/docker-compose.yml.tmpl
+    output: docker-compose.yml
+    storage: mongodb
+    language: yaml
+  - source: storage/mongodb/templates/.env.example.tmpl
+    output: .env.example
+    storage: mongodb
+    language: dotenv
+  - source: storage/mongodb/templates/README.md.tmpl
+    output: README.md
+    storage: mongodb
+    language: markdown
+
+  # Application entry & server runtime
+  - source: storage/mongodb/templates/src/index.ts.tmpl
+    output: src/index.ts
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/db.ts.tmpl
+    output: src/generated/db.ts
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/server.ts.tmpl
+    output: src/generated/server.ts
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/app.ts.tmpl
+    output: src/generated/app.ts
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/auth.ts.tmpl
+    output: src/generated/auth.ts
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/middleware/auth.ts.tmpl
+    output: src/generated/middleware/auth.ts
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/routes/auth.routes.ts.tmpl
+    output: src/generated/routes/auth.routes.ts
+    storage: mongodb
+    language: typescript
+
+  # Per-entity generated models, schemas, and routes
+  - source: storage/mongodb/templates/src/generated/models/model.ts.tmpl
+    output: src/generated/models/{{entity.name}}.ts
+    perEntity: true
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/models/model.ts.tmpl
+    output: src/generated/models/{{entity.snake}}.model.ts
+    perEntity: true
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/schemas/schema.ts.tmpl
+    output: src/generated/schemas/{{entity.snake}}.schema.ts
+    perEntity: true
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/generated/routes/route.ts.tmpl
+    output: src/generated/routes/{{entity.snake}}.routes.ts
+    perEntity: true
+    storage: mongodb
+    language: typescript
+
+  # Developer-owned custom hooks stubs
+  - source: storage/mongodb/templates/src/custom/hooks/hook.ts.tmpl
+    output: src/custom/hooks/{{entity.snake}}.hooks.ts
+    perEntity: true
+    storage: mongodb
+    language: typescript
+  - source: storage/mongodb/templates/src/custom/hooks/index.ts.tmpl
+    output: src/custom/hooks/index.ts
+    storage: mongodb
+    language: typescript
+
+  # Acceptance test suite
+  - source: storage/mongodb/templates/tests/acceptance.test.ts.tmpl
+    output: tests/acceptance.test.ts
+    storage: mongodb
+    language: typescript

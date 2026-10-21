@@ -49,7 +49,7 @@ jobs:
         run: pnpm test
 
   test-go:
-    name: Go Compiler Build & Test
+    name: Go Compiler Build & Unit Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,5 +62,37 @@ jobs:
       - name: Go Test & Build
         run: |
           cd services/compiler
-          go test -v ./...
+          go test -v -skip TestCompileTypeScriptMongo ./...
           go build -v -o bin/compiler ./cmd/compiler
+
+  test-ts-mongodb:
+    name: TypeScript MongoDB Target Static Check & Acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build workspace dependencies
+        run: pnpm --filter @schemaflow/acceptance-suite build
+
+      - name: Test Generated TS+Mongo Static Check & Acceptance Suite
+        run: |
+          cd services/compiler
+          go test -v -run TestCompileTypeScriptMongo ./internal/engine
