@@ -1,0 +1,26 @@
+import { z } from 'zod';
+
+{{range .Fields}}
+{{if eq .Type "enum"}}
+export const {{$.Name}}{{pascal .Name}}Enum = z.enum([{{range $i, $v := .EnumValues}}{{if $i}}, {{end}}'{{$v}}'{{end}}]);
+{{end}}
+{{end}}
+
+export const {{.Name}}CreateSchema = z.object({
+{{range .Fields}}
+{{if and (not .IsPrimaryKey) (not .IsAutoTimestamp)}}
+  {{.Name}}: {{.ZodType}}{{if not .Required}}.optional(){{end}},
+{{end}}
+{{end}}
+});
+
+export const {{.Name}}UpdateSchema = z.object({
+{{range .Fields}}
+{{if and (not .IsPrimaryKey) (not .IsAutoTimestamp)}}
+  {{.Name}}: {{.ZodType}}.optional(),
+{{end}}
+{{end}}
+});
+
+export type {{.Name}}CreateInput = z.infer<typeof {{.Name}}CreateSchema>;
+export type {{.Name}}UpdateInput = z.infer<typeof {{.Name}}UpdateSchema>;

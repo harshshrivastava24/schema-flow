@@ -1,0 +1,15 @@
+import type { {{.Name}}CreateInput, {{.Name}}UpdateInput } from '../../generated/schemas/{{.SnakeName}}.schema.js';
+import type { {{.Name}} } from '../../generated/schema.js';
+
+export interface {{.Name}}HookHandlers {
+  beforeCreate?: (payload: {{.Name}}CreateInput) => Promise<{{.Name}}CreateInput> | {{.Name}}CreateInput;
+  afterCreate?: (result: {{.Name}}) => Promise<void> | void;
+  beforeUpdate?: (id: string, payload: {{.Name}}UpdateInput) => Promise<{{.Name}}UpdateInput> | {{.Name}}UpdateInput;
+  afterUpdate?: (result: {{.Name}}) => Promise<void> | void;
+  beforeDelete?: (id: string) => Promise<void> | void;
+  afterDelete?: (id: string) => Promise<void> | void;
+}
+
+export const {{.CamelName}}Hooks: {{.Name}}HookHandlers = {
+  // Add custom developer hooks here
+};
