@@ -1,0 +1,50 @@
+import { test } from 'node:test';
+import assert from 'node:assert';
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { connectDB, disconnectDB, runMigrations } from '../src/generated/db.js';
+import { createApp } from '../src/generated/server.js';
+import { runAcceptanceSuite } from '@schemaflow/acceptance-suite';
+
+test('Generated TypeScript Express 5 + PostgreSQL (Drizzle) backend passes shared HTTP acceptance suite', async () => {
+  let server: Server | null = null;
+
+  try {
+    // 1. Connect database & run explicit migrations ledger
+    await connectDB();
+    await runMigrations();
+
+    // 2. Start Express 5 application on ephemeral port
+    const app = createApp();
+    server = await new Promise<Server>((resolve) => {
+      const s = app.listen(0, () => resolve(s));
+    });
+
+    const address = server.address() as AddressInfo;
+    const baseUrl = `http://localhost:${address.port}`;
+
+    // 3. Run language-agnostic shared acceptance suite
+    const report = await runAcceptanceSuite({
+      baseUrl,
+      verbose: false,
+      throwOnError: false
+    });
+
+    if (!report.passed) {
+      const failureList = report.steps
+        .filter((s) => !s.passed)
+        .map((s) => `[${s.name}]: ${s.error}`)
+        .join('\n');
+      assert.fail(`Acceptance suite failed with ${report.failedCount} errors:\n${failureList}`);
+    }
+
+    assert.strictEqual(report.passed, true);
+    assert.strictEqual(report.failedCount, 0);
+    assert.strictEqual(report.total, 10);
+  } finally {
+    if (server) {
+      await new Promise<void>((resolve) => server!.close(() => resolve()));
+    }
+    await disconnectDB();
+  }
+});

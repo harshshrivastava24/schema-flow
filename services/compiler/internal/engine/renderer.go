@@ -87,11 +87,18 @@ func Compile(req *ir.CompileRequest) (*CompileResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("DDL generation failed: %w", err)
 		}
-		files = append(files, GeneratedFile{
-			Path:     "generated/migrations/0001_init.sql",
-			Content:  []byte(sqlContent),
-			Language: "sql",
-		})
+		files = append(files,
+			GeneratedFile{
+				Path:     "generated/migrations/0001_init.sql",
+				Content:  []byte(sqlContent),
+				Language: "sql",
+			},
+			GeneratedFile{
+				Path:     "migrations/0001_init.sql",
+				Content:  []byte(sqlContent),
+				Language: "sql",
+			},
+		)
 	}
 
 	// 3b. OpenAPI 3.1 specification

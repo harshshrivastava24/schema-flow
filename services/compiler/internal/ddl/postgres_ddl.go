@@ -89,7 +89,7 @@ func writeCreateTable(sb *strings.Builder, doc *ir.IRDocument, ent *ir.Entity) {
 	var pkName string
 
 	for _, fld := range ent.Fields {
-		col := fmt.Sprintf("  %s %s", fld.Name, pgType(doc, ent, &fld))
+		col := fmt.Sprintf("  \"%s\" %s", fld.Name, pgType(doc, ent, &fld))
 
 		if fld.IsPK() {
 			pkName = fld.Name
@@ -109,6 +109,18 @@ func writeCreateTable(sb *strings.Builder, doc *ir.IRDocument, ent *ir.Entity) {
 		}
 
 		lines = append(lines, col)
+	}
+
+	// If auth is enabled, ensure the auth entity table has password column
+	hasPassword := false
+	for _, fld := range ent.Fields {
+		if fld.Name == "password" {
+			hasPassword = true
+			break
+		}
+	}
+	if doc.Auth.Enabled && !hasPassword && (strings.EqualFold(ent.Name, "User") || strings.EqualFold(ent.Name, "Account")) {
+		lines = append(lines, "  \"password\" TEXT")
 	}
 
 	// Add foreign key constraints inline
@@ -137,7 +149,7 @@ func writeCreateTable(sb *strings.Builder, doc *ir.IRDocument, ent *ir.Entity) {
 			onDelete = strings.ReplaceAll(string(rel.OnDelete), "_", " ")
 		}
 
-		fkLine := fmt.Sprintf("  CONSTRAINT fk_%s_%s FOREIGN KEY (%s) REFERENCES %s(%s) ON DELETE %s",
+		fkLine := fmt.Sprintf("  CONSTRAINT fk_%s_%s FOREIGN KEY (\"%s\") REFERENCES %s(\"%s\") ON DELETE %s",
 			ent.TableName, rel.ForeignKeyField,
 			rel.ForeignKeyField,
 			fromEnt.TableName, fromPK.Name,
@@ -180,12 +192,12 @@ func writeJoinTable(sb *strings.Builder, doc *ir.IRDocument, rel ir.Relation) {
 	}
 
 	sb.WriteString(fmt.Sprintf("CREATE TABLE %s (\n", joinTable))
-	sb.WriteString(fmt.Sprintf("  %s %s NOT NULL,\n", fromCol, pgTypeForFieldType(fromPK.Type)))
-	sb.WriteString(fmt.Sprintf("  %s %s NOT NULL,\n", toCol, pgTypeForFieldType(toPK.Type)))
-	sb.WriteString(fmt.Sprintf("  PRIMARY KEY (%s, %s),\n", fromCol, toCol))
-	sb.WriteString(fmt.Sprintf("  CONSTRAINT fk_%s_%s FOREIGN KEY (%s) REFERENCES %s(%s) ON DELETE CASCADE,\n",
+	sb.WriteString(fmt.Sprintf("  \"%s\" %s NOT NULL,\n", fromCol, pgTypeForFieldType(fromPK.Type)))
+	sb.WriteString(fmt.Sprintf("  \"%s\" %s NOT NULL,\n", toCol, pgTypeForFieldType(toPK.Type)))
+	sb.WriteString(fmt.Sprintf("  PRIMARY KEY (\"%s\", \"%s\"),\n", fromCol, toCol))
+	sb.WriteString(fmt.Sprintf("  CONSTRAINT fk_%s_%s FOREIGN KEY (\"%s\") REFERENCES %s(\"%s\") ON DELETE CASCADE,\n",
 		joinTable, fromCol, fromCol, fromEnt.TableName, fromPK.Name))
-	sb.WriteString(fmt.Sprintf("  CONSTRAINT fk_%s_%s FOREIGN KEY (%s) REFERENCES %s(%s) ON DELETE CASCADE\n",
+	sb.WriteString(fmt.Sprintf("  CONSTRAINT fk_%s_%s FOREIGN KEY (\"%s\") REFERENCES %s(\"%s\") ON DELETE CASCADE\n",
 		joinTable, toCol, toCol, toEnt.TableName, toPK.Name))
 	sb.WriteString(");\n\n")
 }
@@ -211,7 +223,7 @@ func writeIndexes(sb *strings.Builder, doc *ir.IRDocument, ent *ir.Entity) {
 			continue // PK already has implicit index
 		}
 		if fkFields[fld.Name] {
-			idx := fmt.Sprintf("CREATE INDEX idx_%s_%s ON %s (%s);\n",
+			idx := fmt.Sprintf("CREATE INDEX idx_%s_%s ON %s (\"%s\");\n",
 				ent.TableName, fld.Name, ent.TableName, fld.Name)
 			indexes = append(indexes, idxDef{name: fmt.Sprintf("idx_%s_%s", ent.TableName, fld.Name), sql: idx})
 		}

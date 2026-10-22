@@ -1,0 +1,170 @@
+import { Router, type Request, type Response } from 'express';
+import { eq } from 'drizzle-orm';
+{{if and .IsAuthEntity $.Project.HasAuth}}
+import bcrypt from 'bcryptjs';
+{{end}}
+import { db } from '../db.js';
+import { {{.TableName}}Table } from '../schema.js';
+import { {{.Name}}CreateSchema, {{.Name}}UpdateSchema } from '../schemas/{{.SnakeName}}.schema.js';
+import { {{.CamelName}}Hooks } from '../../custom/hooks/{{.SnakeName}}.hooks.js';
+{{if .HasAuth}}
+import { authenticate } from '../middleware/auth.js';
+{{end}}
+
+export const {{.CamelName}}Router: Router = Router();
+
+{{if .HasAuth}}
+// Middleware: require JWT authentication per IR endpoint policy
+{{.CamelName}}Router.use(authenticate);
+{{end}}
+
+function sanitize(item: any) {
+  if (!item) return item;
+  {{if and .IsAuthEntity $.Project.HasAuth}}
+  const { password, ...rest } = item;
+  return rest;
+  {{else}}
+  return item;
+  {{end}}
+}
+
+{{if .Endpoints.Ops.list}}
+// GET /api/{{.PluralName}} - List entities
+{{.CamelName}}Router.get('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const items = await db.select().from({{.TableName}}Table).limit(limit).offset(offset);
+    res.status(200).json(items.map(sanitize));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch {{.PluralName}}' });
+  }
+});
+{{end}}
+
+{{if .Endpoints.Ops.get}}
+// GET /api/{{.PluralName}}/:id - Get entity by ID
+{{.CamelName}}Router.get('/:id', async (req: Request, res: Response): Promise<void> => {
+  const id = typeof req.params.id === 'string' ? req.params.id : req.params.id?.[0] || '';
+  try {
+    const [item] = await db.select().from({{.TableName}}Table).where(eq({{.TableName}}Table.{{.PrimaryKey.Name}}, id)).limit(1);
+    if (!item) {
+      res.status(404).json({ error: `{{.Name}} with id '${id}' not found` });
+      return;
+    }
+    res.status(200).json(sanitize(item));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch {{.CamelName}}' });
+  }
+});
+{{end}}
+
+{{if .Endpoints.Ops.create}}
+// POST /api/{{.PluralName}} - Create entity
+{{.CamelName}}Router.post('/', async (req: Request, res: Response): Promise<void> => {
+  const parseResult = {{.Name}}CreateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'Validation failed',
+      details: parseResult.error.flatten()
+    });
+    return;
+  }
+
+  try {
+    const hookPayload = {{.CamelName}}Hooks.beforeCreate
+      ? await {{.CamelName}}Hooks.beforeCreate(parseResult.data)
+      : parseResult.data;
+
+    let dataToInsert: any = { ...hookPayload };
+
+{{if and .IsAuthEntity $.Project.HasAuth}}
+    if (dataToInsert.password) {
+      const salt = await bcrypt.genSalt(10);
+      dataToInsert.password = await bcrypt.hash(dataToInsert.password, salt);
+    }
+{{end}}
+
+    const [item] = await db.insert({{.TableName}}Table).values(dataToInsert).returning();
+
+    if ({{.CamelName}}Hooks.afterCreate) {
+      await {{.CamelName}}Hooks.afterCreate(item);
+    }
+
+    res.status(201).json(sanitize(item));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to create {{.CamelName}}' });
+  }
+});
+{{end}}
+
+{{if .Endpoints.Ops.update}}
+// PATCH /api/{{.PluralName}}/:id - Update entity
+{{.CamelName}}Router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+  const id = typeof req.params.id === 'string' ? req.params.id : req.params.id?.[0] || '';
+  const parseResult = {{.Name}}UpdateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'Validation failed',
+      details: parseResult.error.flatten()
+    });
+    return;
+  }
+
+  try {
+    const hookPayload = {{.CamelName}}Hooks.beforeUpdate
+      ? await {{.CamelName}}Hooks.beforeUpdate(id, parseResult.data)
+      : parseResult.data;
+
+    let dataToUpdate: any = { ...hookPayload };
+
+{{if and .IsAuthEntity $.Project.HasAuth}}
+    if (dataToUpdate.password) {
+      const salt = await bcrypt.genSalt(10);
+      dataToUpdate.password = await bcrypt.hash(dataToUpdate.password, salt);
+    }
+{{end}}
+
+    const [updated] = await db.update({{.TableName}}Table).set(dataToUpdate).where(eq({{.TableName}}Table.{{.PrimaryKey.Name}}, id)).returning();
+    if (!updated) {
+      res.status(404).json({ error: `{{.Name}} with id '${id}' not found` });
+      return;
+    }
+
+    if ({{.CamelName}}Hooks.afterUpdate) {
+      await {{.CamelName}}Hooks.afterUpdate(updated);
+    }
+
+    res.status(200).json(sanitize(updated));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update {{.CamelName}}' });
+  }
+});
+{{end}}
+
+{{if .Endpoints.Ops.delete}}
+// DELETE /api/{{.PluralName}}/:id - Delete entity
+{{.CamelName}}Router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const id = typeof req.params.id === 'string' ? req.params.id : req.params.id?.[0] || '';
+  try {
+    if ({{.CamelName}}Hooks.beforeDelete) {
+      await {{.CamelName}}Hooks.beforeDelete(id);
+    }
+
+    const [deleted] = await db.delete({{.TableName}}Table).where(eq({{.TableName}}Table.{{.PrimaryKey.Name}}, id)).returning();
+    if (!deleted) {
+      res.status(404).json({ error: `{{.Name}} with id '${id}' not found` });
+      return;
+    }
+
+    if ({{.CamelName}}Hooks.afterDelete) {
+      await {{.CamelName}}Hooks.afterDelete(id);
+    }
+
+    res.status(204).send();
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete {{.CamelName}}' });
+  }
+});
+{{end}}
