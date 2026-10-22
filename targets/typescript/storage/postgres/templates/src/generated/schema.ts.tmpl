@@ -1,0 +1,23 @@
+import { pgTable, text, integer, numeric, boolean, timestamp, uuid, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+
+{{range .Enums}}
+export const {{.SqlName}} = pgEnum('{{.SqlName}}', [{{.QuotedVals}}]);
+{{end}}
+
+{{range .Entities}}
+export const {{.TableName}}Table = pgTable('{{.TableName}}', {
+{{range .Fields}}
+  {{.Name}}: {{.DrizzleColDef}},
+{{end}}
+});
+
+export type {{.Name}} = typeof {{.TableName}}Table.$inferSelect;
+export type New{{.Name}} = typeof {{.TableName}}Table.$inferInsert;
+{{end}}
+
+{{range .ManyToManyRelations}}
+export const {{.TableName}}Table = pgTable('{{.TableName}}', {
+  {{.FromCol}}: {{.FromType}}('{{.FromCol}}').notNull().references(() => {{.FromTable}}Table.{{.FromPK}}, { onDelete: 'cascade' }),
+  {{.ToCol}}: {{.ToType}}('{{.ToCol}}').notNull().references(() => {{.ToTable}}Table.{{.ToPK}}, { onDelete: 'cascade' }),
+});
+{{end}}

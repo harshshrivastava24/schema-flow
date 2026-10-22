@@ -1,0 +1,97 @@
+import { Router, type Request, type Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { db } from '../db.js';
+{{if .AuthEntity}}
+import { {{.AuthEntity.TableName}}Table } from '../schema.js';
+{{end}}
+import { signToken } from '../auth.js';
+
+export const authRouter: Router = Router();
+
+const RegisterSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  name: z.string().min(1),
+  role: z.string().optional().default('USER')
+});
+
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string()
+});
+
+function sanitize(user: any) {
+  if (!user) return user;
+  const { password, ...rest } = user;
+  return rest;
+}
+
+authRouter.post('/register', async (req: Request, res: Response): Promise<void> => {
+  const parseResult = RegisterSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: 'Validation failed', details: parseResult.error.flatten() });
+    return;
+  }
+
+{{if .AuthEntity}}
+  try {
+    const { email, password, name, role } = parseResult.data;
+    const existing = await db.select().from({{.AuthEntity.TableName}}Table).where(eq({{.AuthEntity.TableName}}Table.email, email)).limit(1);
+    if (existing.length > 0) {
+      res.status(409).json({ error: 'User with this email already exists' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const [user] = await db.insert({{.AuthEntity.TableName}}Table).values({
+      email,
+      name,
+      password: hashedPassword,
+      role: role as any
+    }).returning();
+
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+    res.status(201).json({ token, user: sanitize(user) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Registration failed' });
+  }
+{{else}}
+  res.status(501).json({ error: 'Auth entity not configured' });
+{{end}}
+});
+
+authRouter.post('/login', async (req: Request, res: Response): Promise<void> => {
+  const parseResult = LoginSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: 'Validation failed', details: parseResult.error.flatten() });
+    return;
+  }
+
+{{if .AuthEntity}}
+  try {
+    const { email, password } = parseResult.data;
+    const [user] = await db.select().from({{.AuthEntity.TableName}}Table).where(eq({{.AuthEntity.TableName}}Table.email, email)).limit(1);
+    if (!user) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+    res.status(200).json({ token, user: sanitize(user) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Login failed' });
+  }
+{{else}}
+  res.status(501).json({ error: 'Auth entity not configured' });
+{{end}}
+});

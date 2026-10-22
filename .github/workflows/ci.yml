@@ -62,7 +62,7 @@ jobs:
       - name: Go Test & Build
         run: |
           cd services/compiler
-          go test -v -skip TestCompileTypeScriptMongo ./...
+          go test -v -skip "TestCompileTypeScript.*" ./...
           go build -v -o bin/compiler ./cmd/compiler
 
   test-ts-mongodb:
@@ -96,3 +96,52 @@ jobs:
         run: |
           cd services/compiler
           go test -v -run TestCompileTypeScriptMongo ./internal/engine
+
+  test-ts-postgres:
+    name: TypeScript PostgreSQL Target Static Check & Acceptance
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: backendgen_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Setup Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build workspace dependencies
+        run: pnpm --filter @schemaflow/acceptance-suite build
+
+      - name: Test Generated TS+PostgreSQL Static Check & Acceptance Suite
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/backendgen_test
+        run: |
+          cd services/compiler
+          go test -v -run TestCompileTypeScriptPostgres ./internal/engine
+

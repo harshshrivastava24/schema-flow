@@ -1,0 +1,39 @@
+import express, { type Express } from 'express';
+import cors from 'cors';
+{{if .HasAuth}}
+import { authRouter } from './routes/auth.routes.js';
+{{end}}
+{{range .Entities}}
+import { {{.CamelName}}Router } from './routes/{{.SnakeName}}.routes.js';
+{{end}}
+
+export function createApp(): Express {
+  const app: Express = express();
+
+  app.use(cors());
+  app.use(express.json());
+
+  // Health check endpoint
+  app.get('/healthz', (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  {{if .HasAuth}}
+  // Auth router
+  app.use('/api/auth', authRouter);
+  {{end}}
+
+  // Per-entity CRUD routers
+  {{range .Entities}}
+  app.use('/api/{{.PluralName}}', {{.CamelName}}Router);
+  {{end}}
+
+  return app;
+}
+
+export function startServer(port: number = parseInt(process.env.PORT || '3000', 10)) {
+  const app = createApp();
+  return app.listen(port, () => {
+    console.log(`[Server] Running on http://localhost:${port}`);
+  });
+}

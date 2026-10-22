@@ -1,0 +1,3 @@
+{{range .Entities}}
+export { {{.CamelName}}Hooks } from './{{.SnakeName}}.hooks.js';
+{{end}}

@@ -1,0 +1,13 @@
+import 'dotenv/config';
+import { connectDB } from './generated/db.js';
+import { startServer } from './generated/server.js';
+
+async function bootstrap() {
+  await connectDB();
+  startServer();
+}
+
+bootstrap().catch((err) => {
+  console.error('Fatal application error during bootstrap:', err);
+  process.exit(1);
+});

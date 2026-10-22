@@ -578,7 +578,7 @@ func TestIRValidationFailure(t *testing.T) {
 func TestZipEntryStructure(t *testing.T) {
 	req := &ir.CompileRequest{
 		Operation: "download",
-		Target:    "typescript",
+		Target:    "go",
 		IR:        makeBlogIR(),
 	}
 
